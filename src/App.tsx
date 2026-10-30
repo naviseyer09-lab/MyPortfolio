@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from 'react'
 
 type IconName =
   | 'arrow'
@@ -44,6 +44,33 @@ const profile = {
     github: 'https://github.com/naviseyer09-lab',
     linkedin: 'https://www.linkedin.com/in/ivan-lloyd-reyes-149721410/',
   },
+}
+
+async function prepareProfilePhoto(file: File): Promise<string> {
+  const imageUrl = URL.createObjectURL(file)
+
+  try {
+    const image = new Image()
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve()
+      image.onerror = () => reject(new Error('Hindi mabasa ang napiling larawan.'))
+      image.src = imageUrl
+    })
+
+    const maxDimension = 1200
+    const scale = Math.min(1, maxDimension / Math.max(image.width, image.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(image.width * scale)
+    canvas.height = Math.round(image.height * scale)
+    const context = canvas.getContext('2d')
+
+    if (!context) throw new Error('Hindi maihanda ang larawan sa browser na ito.')
+
+    context.drawImage(image, 0, 0, canvas.width, canvas.height)
+    return canvas.toDataURL('image/jpeg', 0.85)
+  } finally {
+    URL.revokeObjectURL(imageUrl)
+  }
 }
 
 const paths: Record<IconName, ReactNode> = {
@@ -145,6 +172,8 @@ function App() {
   const [copied, setCopied] = useState('')
   const [qrOpen, setQrOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [profilePhoto, setProfilePhoto] = useState(() => localStorage.getItem('profile-photo') || '')
+  const [photoMessage, setPhotoMessage] = useState('')
 
   const pageUrl = useMemo(() => window.location.href.split('#')[0], [])
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=720x720&format=png&margin=20&data=${encodeURIComponent(pageUrl)}`
@@ -169,6 +198,41 @@ function App() {
     window.addEventListener('keydown', close)
     return () => window.removeEventListener('keydown', close)
   }, [qrOpen])
+
+  const handleProfilePhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      setPhotoMessage('Pumili ng image file.')
+      return
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setPhotoMessage('Masyadong malaki ang larawan. Pumili ng file na mas maliit sa 10 MB.')
+      return
+    }
+
+    try {
+      const photo = await prepareProfilePhoto(file)
+      localStorage.setItem('profile-photo', photo)
+      setProfilePhoto(photo)
+      setPhotoMessage('Nai-save ang larawan sa browser na ito.')
+    } catch (error) {
+      setPhotoMessage(error instanceof Error ? error.message : 'Hindi ma-save ang larawan. Subukan ang mas maliit na file.')
+    }
+  }
+
+  const removeProfilePhoto = () => {
+    try {
+      localStorage.removeItem('profile-photo')
+      setProfilePhoto('')
+      setPhotoMessage('Inalis ang larawan.')
+    } catch {
+      setPhotoMessage('Hindi maalis ang larawan. Subukan ulit.')
+    }
+  }
 
   const copy = async (value: string, key: string) => {
     await navigator.clipboard.writeText(value)
@@ -266,11 +330,37 @@ function App() {
               <div className="avatar-signal avatar-signal-one" />
               <div className="avatar-signal avatar-signal-two" />
               <div className="avatar">
-                <span>{profile.initials}</span>
-                <small>ADD PHOTO</small>
+                {profilePhoto ? (
+                  <img alt={`${profile.name} profile`} src={profilePhoto} />
+                ) : (
+                  <>
+                    <span>{profile.initials}</span>
+                    <small>ADD PHOTO</small>
+                  </>
+                )}
+              </div>
+              <div className="avatar-photo-controls">
+                <input
+                  accept="image/*"
+                  className="photo-input"
+                  id="profile-photo-input"
+                  onChange={handleProfilePhotoChange}
+                  type="file"
+                />
+                <label className="photo-control" htmlFor="profile-photo-input">
+                  {profilePhoto ? 'Change photo' : 'Choose photo'}
+                </label>
+                {profilePhoto && (
+                  <button className="photo-control" onClick={removeProfilePhoto} type="button">
+                    Remove
+                  </button>
+                )}
               </div>
               <div className="nfc-chip"><Icon name="nfc" size={17} /> TAP CONNECTED</div>
             </div>
+            <p aria-live="polite" className="photo-note">
+              {photoMessage || 'Saved only in this browser; it will not appear for other visitors.'}
+            </p>
           </div>
 
           <div className="hero-copy reveal is-visible">

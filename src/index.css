@@ -183,11 +183,19 @@ h1, h2, h3, strong, .brand { font-family: 'Space Grotesk', sans-serif; }
   justify-content: center;
   margin: 13px;
   overflow: hidden;
+  position: relative;
   width: 100%;
 }
 .avatar::before { background: linear-gradient(115deg, transparent 25%, rgba(255,255,255,.08) 45%, transparent 60%); content: ''; inset: 0; position: absolute; transform: translateX(-100%); animation: shine 5s ease-in-out infinite; }
 .avatar span { color: #dff8ff; font: 700 clamp(56px, 8vw, 92px)/1 'Space Grotesk'; letter-spacing: -.08em; text-shadow: 0 0 35px rgba(0,212,255,.45); }
 .avatar small { color: #7ea2c6; font-size: 9px; font-weight: 700; letter-spacing: .22em; margin-top: 12px; }
+.avatar img { height: 100%; inset: 0; object-fit: cover; position: absolute; width: 100%; }
+.avatar-photo-controls { bottom: 43px; display: flex; gap: 7px; left: 50%; position: absolute; transform: translateX(-50%); z-index: 4; }
+.photo-input { height: 1px; opacity: 0; overflow: hidden; position: absolute; width: 1px; }
+.photo-control { background: rgba(6,13,31,.82); border: 1px solid var(--line-strong); border-radius: 999px; color: var(--cyan-soft); cursor: pointer; font: inherit; font-size: 10px; font-weight: 700; padding: 8px 11px; white-space: nowrap; }
+.photo-control:hover { background: var(--surface-solid); }
+.photo-input:focus-visible + .photo-control, .photo-control:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.photo-note { bottom: 4px; color: var(--muted); font-size: 11px; left: 0; margin: 0; position: absolute; text-align: center; width: 100%; }
 .nfc-chip {
   align-items: center;
   backdrop-filter: blur(15px);
