@@ -33,7 +33,7 @@ const profile = {
   name: 'Ivan Lloyd N. Reyes',
   role: 'IT Student',
   initials: 'IR',
-  email: 'ivanlloydreys9@gmail.com',
+  email: 'ivanlloydreyes9@gmail.com',
   phone: '+63 XXX XXX XXXX',
   smsPhone: '+63XXXXXXXXXX',
   school: 'College of Research And Technology',
