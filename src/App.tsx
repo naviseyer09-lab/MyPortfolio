@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 
 type IconName =
   | 'arrow'
@@ -32,12 +32,14 @@ type IconName =
 const profile = {
   name: 'Ivan Lloyd N. Reyes',
   role: 'IT Student',
-  initials: 'IR',
+  initials: 'Ivan',
   email: 'ivanlloydreyes9@gmail.com',
   phone: '09918177027',
   smsPhone: '+639918177027',
   school: 'College of Research And Technology',
   academicYear: 'Academic year',
+  photoUrl: '',
+  photoPosition: '50% 50%',
   bio: 'I’m an IT student passionate about turning ideas into useful digital experiences. I enjoy exploring web development, visual design, computer systems, and new technologies—always learning, experimenting, and finding creative ways to solve problems.',
   social: {
     facebook: 'https://www.facebook.com/ivan.lloyd.reyes.2025',
@@ -46,6 +48,15 @@ const profile = {
   },
 }
 
+const skillGroups = [
+  { title: 'Development', skills: ['HTML', 'CSS', 'JavaScript', 'React', 'Basic PHP / MySQL'] },
+  { title: 'Design & creative', skills: ['Figma', 'Canva', 'Responsive Design', 'Prototyping'] },
+  { title: 'Systems & hardware', skills: ['Networking', 'Hardware Troubleshooting', 'Arduino'] },
+  { title: 'Workflow', skills: ['Git / GitHub'] },
+]
+
+const currentlyLearning = ['Modern web development', 'Creative technology']
+
 async function prepareProfilePhoto(file: File): Promise<string> {
   const imageUrl = URL.createObjectURL(file)
 
@@ -53,7 +64,7 @@ async function prepareProfilePhoto(file: File): Promise<string> {
     const image = new Image()
     await new Promise<void>((resolve, reject) => {
       image.onload = () => resolve()
-      image.onerror = () => reject(new Error('Hindi mabasa ang napiling larawan.'))
+      image.onerror = () => reject(new Error('The selected image could not be opened. Try another JPG, PNG, or WEBP file.'))
       image.src = imageUrl
     })
 
@@ -64,7 +75,7 @@ async function prepareProfilePhoto(file: File): Promise<string> {
     canvas.height = Math.round(image.height * scale)
     const context = canvas.getContext('2d')
 
-    if (!context) throw new Error('Hindi maihanda ang larawan sa browser na ito.')
+    if (!context) throw new Error('This browser could not prepare the image. Try another browser.')
 
     context.drawImage(image, 0, 0, canvas.width, canvas.height)
     return canvas.toDataURL('image/jpeg', 0.85)
@@ -172,8 +183,15 @@ function App() {
   const [copied, setCopied] = useState('')
   const [qrOpen, setQrOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [profilePhoto, setProfilePhoto] = useState(() => localStorage.getItem('profile-photo') || '')
+  const [profilePhoto, setProfilePhoto] = useState(() => localStorage.getItem('profile-photo') || profile.photoUrl)
+  const [photoPosition, setPhotoPosition] = useState(() => localStorage.getItem('profile-photo-position') || profile.photoPosition)
+  const [draftPhoto, setDraftPhoto] = useState('')
+  const [draftPosition, setDraftPosition] = useState(photoPosition)
   const [photoMessage, setPhotoMessage] = useState('')
+  const [contactStatus, setContactStatus] = useState<{ state: 'idle' | 'sending' | 'success' | 'error'; message: string }>({
+    state: 'idle',
+    message: '',
+  })
 
   const pageUrl = useMemo(() => window.location.href.split('#')[0], [])
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=720x720&format=png&margin=20&data=${encodeURIComponent(pageUrl)}`
@@ -204,40 +222,83 @@ function App() {
     event.target.value = ''
     if (!file) return
 
-    if (!file.type.startsWith('image/')) {
-      setPhotoMessage('Pumili ng image file.')
+    const extension = file.name.split('.').pop()?.toLowerCase()
+    if (
+      !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) &&
+      !['jpg', 'jpeg', 'png', 'webp'].includes(extension || '')
+    ) {
+      setPhotoMessage('Choose a JPG, JPEG, PNG, or WEBP image.')
       return
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      setPhotoMessage('Masyadong malaki ang larawan. Pumili ng file na mas maliit sa 10 MB.')
+      setPhotoMessage('That image is larger than 10 MB. Choose a smaller file.')
       return
     }
 
     try {
       const photo = await prepareProfilePhoto(file)
-      localStorage.setItem('profile-photo', photo)
-      setProfilePhoto(photo)
-      setPhotoMessage('Nai-save ang larawan sa browser na ito.')
+      setDraftPhoto(photo)
+      setDraftPosition(photoPosition)
+      setPhotoMessage('Preview your image and adjust its crop before saving.')
     } catch (error) {
-      setPhotoMessage(error instanceof Error ? error.message : 'Hindi ma-save ang larawan. Subukan ang mas maliit na file.')
+      setPhotoMessage(error instanceof Error ? error.message : 'The image could not be prepared. Try a smaller file.')
     }
+  }
+
+  const saveProfilePhoto = () => {
+    try {
+      localStorage.setItem('profile-photo', draftPhoto)
+      localStorage.setItem('profile-photo-position', draftPosition)
+      setProfilePhoto(draftPhoto)
+      setPhotoPosition(draftPosition)
+      setDraftPhoto('')
+      setPhotoMessage('Photo saved in this browser. Download it below to publish it for all visitors.')
+    } catch (error) {
+      setPhotoMessage(
+        error instanceof Error
+          ? `Photo could not be saved: ${error.message}`
+          : 'Photo could not be saved. Try a smaller image or clear browser storage.',
+      )
+    }
+  }
+
+  const cancelProfilePhoto = () => {
+    setDraftPhoto('')
+    setDraftPosition(photoPosition)
+    setPhotoMessage('')
   }
 
   const removeProfilePhoto = () => {
     try {
       localStorage.removeItem('profile-photo')
+      localStorage.removeItem('profile-photo-position')
       setProfilePhoto('')
-      setPhotoMessage('Inalis ang larawan.')
-    } catch {
-      setPhotoMessage('Hindi maalis ang larawan. Subukan ulit.')
+      setPhotoPosition('50% 50%')
+      setDraftPhoto('')
+      setPhotoMessage('Photo removed from this browser.')
+    } catch (error) {
+      setPhotoMessage(error instanceof Error ? `Photo could not be removed: ${error.message}` : 'Photo could not be removed.')
     }
   }
 
+  const downloadProfilePhoto = () => {
+    if (!profilePhoto) return
+    const anchor = document.createElement('a')
+    anchor.href = profilePhoto
+    anchor.download = 'profile-photo.jpg'
+    anchor.click()
+  }
+
   const copy = async (value: string, key: string) => {
-    await navigator.clipboard.writeText(value)
-    setCopied(key)
-    window.setTimeout(() => setCopied(''), 1800)
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(key)
+      window.setTimeout(() => setCopied(''), 1800)
+    } catch (error) {
+      setCopied('')
+      setPhotoMessage(error instanceof Error ? `Could not copy: ${error.message}` : 'Could not copy to clipboard.')
+    }
   }
 
   const downloadVCard = () => {
@@ -257,32 +318,61 @@ function App() {
     anchor.href = url
     anchor.download = 'Ivan-Lloyd-Reyes.vcf'
     anchor.click()
-    URL.revokeObjectURL(url)
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   const shareProfile = async () => {
-    if (navigator.share) {
-      await navigator.share({ title: `${profile.name} — ${profile.role}`, text: 'View my digital business card.', url: pageUrl })
-    } else {
-      await copy(pageUrl, 'profile')
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `${profile.name} — ${profile.role}`, text: 'View my digital business card.', url: pageUrl })
+      } else {
+        await copy(pageUrl, 'profile')
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return
+      setPhotoMessage(error instanceof Error ? `Could not share the profile: ${error.message}` : 'Could not share the profile.')
     }
   }
 
-  const navItems = ['Home', 'About', 'Skills', 'Education', 'Contact']
-  const skills = [
-    'HTML',
-    'CSS',
-    'JavaScript',
-    'React',
-    'Basic PHP / MySQL',
-    'Figma',
-    'Canva',
-    'Responsive Design',
-    'Prototyping',
-    'Networking',
-    'Hardware Troubleshooting',
-    'Git / GitHub',
-    'Arduino',
+  const handleContactSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const form = event.currentTarget
+    const endpoint = import.meta.env.VITE_FORMSPREE_ENDPOINT
+    if (!endpoint) {
+      setContactStatus({
+        state: 'error',
+        message: 'The contact form is not connected yet. Please use the email link or configure VITE_FORMSPREE_ENDPOINT.',
+      })
+      return
+    }
+
+    setContactStatus({ state: 'sending', message: 'Sending your message…' })
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { Accept: 'application/json' },
+      })
+      if (!response.ok) throw new Error('The message could not be sent. Please try again or email me directly.')
+      form.reset()
+      setContactStatus({ state: 'success', message: 'Thanks for reaching out. Your message has been sent.' })
+    } catch (error) {
+      setContactStatus({
+        state: 'error',
+        message: error instanceof Error ? error.message : 'The message could not be sent. Please email me directly.',
+      })
+    }
+  }
+
+  const navItems = [
+    { label: 'Home', id: 'home' },
+    { label: 'About', id: 'about' },
+    { label: 'Skills', id: 'skills' },
+    { label: 'Education', id: 'education' },
+    { label: 'Projects', id: 'projects' },
+    { label: 'Experience', id: 'experience' },
+    { label: 'Certifications', id: 'certifications' },
+    { label: 'Contact', id: 'contact' },
   ]
   const socials: { name: string; icon: IconName; href: string }[] = [
     { name: 'Facebook', icon: 'facebook', href: profile.social.facebook },
@@ -301,7 +391,7 @@ function App() {
         </a>
         <nav aria-label="Primary navigation" className={`desktop-nav ${menuOpen ? 'nav-open' : ''}`}>
           {navItems.map((item) => (
-            <a href={`#${item.toLowerCase()}`} key={item} onClick={() => setMenuOpen(false)}>{item}</a>
+            <a href={`#${item.id}`} key={item.id} onClick={() => setMenuOpen(false)}>{item.label}</a>
           ))}
         </nav>
         <div className="header-actions">
@@ -313,7 +403,7 @@ function App() {
           >
             <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
           </button>
-          <button aria-label="Open menu" className="icon-button menu-button" onClick={() => setMenuOpen(!menuOpen)} type="button">
+          <button aria-expanded={menuOpen} aria-label={menuOpen ? 'Close menu' : 'Open menu'} className="icon-button menu-button" onClick={() => setMenuOpen(!menuOpen)} type="button">
             <Icon name="menu" />
           </button>
         </div>
@@ -330,37 +420,78 @@ function App() {
               <div className="avatar-signal avatar-signal-one" />
               <div className="avatar-signal avatar-signal-two" />
               <div className="avatar">
-                {profilePhoto ? (
-                  <img alt={`${profile.name} profile`} src={profilePhoto} />
+                {draftPhoto || profilePhoto ? (
+                  <img
+                    alt={`${profile.name} profile`}
+                    onError={() => setPhotoMessage('The profile image could not be loaded. Choose another photo.')}
+                    src={draftPhoto || profilePhoto}
+                    style={{ objectPosition: draftPhoto ? draftPosition : photoPosition }}
+                  />
                 ) : (
                   <>
                     <span>{profile.initials}</span>
-                    <small>ADD PHOTO</small>
+                    <small>PROFILE PHOTO</small>
                   </>
                 )}
               </div>
               <div className="avatar-photo-controls">
                 <input
-                  accept="image/*"
+                  accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                   className="photo-input"
                   id="profile-photo-input"
                   onChange={handleProfilePhotoChange}
                   type="file"
                 />
                 <label className="photo-control" htmlFor="profile-photo-input">
-                  {profilePhoto ? 'Change photo' : 'Choose photo'}
+                  {profilePhoto || draftPhoto ? 'Change photo' : 'Choose photo'}
                 </label>
-                {profilePhoto && (
+                {draftPhoto ? (
+                  <>
+                    <button className="photo-control" onClick={saveProfilePhoto} type="button">Save photo</button>
+                    <button className="photo-control" onClick={cancelProfilePhoto} type="button">Cancel</button>
+                  </>
+                ) : profilePhoto ? (
                   <button className="photo-control" onClick={removeProfilePhoto} type="button">
                     Remove
                   </button>
-                )}
+                ) : null}
               </div>
               <div className="nfc-chip"><Icon name="nfc" size={17} /> TAP CONNECTED</div>
             </div>
             <p aria-live="polite" className="photo-note">
-              {photoMessage || 'Saved only in this browser; it will not appear for other visitors.'}
+              {photoMessage || 'Choose a photo to preview and crop it before saving.'}
             </p>
+            {draftPhoto && (
+              <div className="photo-position-controls">
+                <label>
+                  Horizontal crop: {Number.parseInt(draftPosition.split(' ')[0], 10)}%
+                  <input
+                    aria-label="Horizontal photo crop position"
+                    max="100"
+                    min="0"
+                    onChange={(event) => setDraftPosition(`${event.target.value}% ${draftPosition.split(' ')[1]}`)}
+                    type="range"
+                    value={Number.parseInt(draftPosition.split(' ')[0], 10)}
+                  />
+                </label>
+                <label>
+                  Vertical crop: {Number.parseInt(draftPosition.split(' ')[1], 10)}%
+                  <input
+                    aria-label="Vertical photo crop position"
+                    max="100"
+                    min="0"
+                    onChange={(event) => setDraftPosition(`${draftPosition.split(' ')[0]} ${event.target.value}%`)}
+                    type="range"
+                    value={Number.parseInt(draftPosition.split(' ')[1], 10)}
+                  />
+                </label>
+              </div>
+            )}
+            {profilePhoto && !draftPhoto && (
+              <button className="publish-photo" onClick={downloadProfilePhoto} type="button">
+                <Icon name="download" size={15} /> Download photo to publish for everyone
+              </button>
+            )}
           </div>
 
           <div className="hero-copy reveal is-visible">
@@ -371,12 +502,13 @@ function App() {
             <p className="typing">Aspiring IT Professional <b>|</b> Creative Thinker <b>|</b> Technology Enthusiast</p>
             <p className="hero-summary">Building skills, exploring ideas, and creating thoughtful digital experiences one step at a time.</p>
             <div className="hero-actions">
+              <Action download="Ivan-Lloyd-N-Reyes-Resume.pdf" href="/resume.pdf" icon="download" variant="primary">Download resume</Action>
               <Action icon="download" onClick={downloadVCard} variant="primary">Save contact</Action>
               <Action href="#contact" icon="mail">Contact me</Action>
-              <Action href="#about" icon="user" variant="ghost">About me</Action>
+              <Action href="#projects" icon="layers" variant="ghost">View projects</Action>
             </div>
             <div className="quick-stats">
-              <div><strong>13</strong><span>Skills & tools</span></div>
+              <div><strong>{skillGroups.reduce((count, group) => count + group.skills.length, 0)}</strong><span>Skills & tools</span></div>
               <div><strong>IT</strong><span>Student journey</span></div>
               <div><strong>∞</strong><span>Curiosity</span></div>
             </div>
@@ -409,14 +541,25 @@ function App() {
 
         <section className="section skills-section" id="skills">
           <SectionTitle eyebrow="02 / Capabilities" title="Tools I’m learning and creating with." copy="A growing toolkit across development, design, hardware, and digital problem solving." />
-          <div className="skill-cloud reveal">
-            {skills.map((skill, index) => (
-              <span className="skill-pill" key={skill} style={{ '--delay': `${index * 45}ms` } as React.CSSProperties}>
-                <i />{skill}
-              </span>
+          <div className="skill-groups">
+            {skillGroups.map((group) => (
+              <article className="skill-group glass-card reveal" key={group.title}>
+                <h3>{group.title}</h3>
+                <div className="skill-cloud">
+                  {group.skills.map((skill) => (
+                    <span className="skill-pill" key={skill}><i />{skill}</span>
+                  ))}
+                </div>
+              </article>
             ))}
           </div>
-          <div className="skill-note reveal"><Icon name="spark" /><span>Always learning</span> Currently exploring modern web development and creative technology.</div>
+          <div className="learning-card glass-card reveal">
+            <div className="feature-icon"><Icon name="spark" /></div>
+            <div>
+              <span className="eyebrow">Currently learning</span>
+              <div className="learning-list">{currentlyLearning.map((item) => <span key={item}>{item}</span>)}</div>
+            </div>
+          </div>
         </section>
 
         <section className="section education-section" id="education">
@@ -433,8 +576,32 @@ function App() {
           </div>
         </section>
 
+        <section className="section portfolio-section" id="projects">
+          <SectionTitle eyebrow="04 / Selected work" title="Projects" copy="A space for future work and things I build along the way." />
+          <div className="empty-portfolio glass-card reveal">
+            <span className="feature-icon"><Icon name="layers" /></span>
+            <div><h3>Projects will be added here</h3><p>No projects have been published yet.</p></div>
+          </div>
+        </section>
+
+        <section className="section portfolio-section" id="experience">
+          <SectionTitle eyebrow="05 / Experience" title="Experience" />
+          <div className="empty-portfolio glass-card reveal">
+            <span className="feature-icon"><Icon name="tool" /></span>
+            <div><h3>Experience details coming later</h3><p>No experience entries have been added.</p></div>
+          </div>
+        </section>
+
+        <section className="section portfolio-section" id="certifications">
+          <SectionTitle eyebrow="06 / Certifications" title="Certifications" />
+          <div className="empty-portfolio glass-card reveal">
+            <span className="feature-icon"><Icon name="check" /></span>
+            <div><h3>Certifications will appear here</h3><p>No certifications have been listed.</p></div>
+          </div>
+        </section>
+
         <section className="section" id="contact">
-          <SectionTitle eyebrow="04 / Connect" title="Let’s start a conversation." copy="Have an opportunity, an idea, or simply want to connect? My digital door is open." />
+          <SectionTitle eyebrow="07 / Connect" title="Let’s start a conversation." copy="Have an opportunity, an idea, or simply want to connect? My digital door is open." />
           <div className="contact-layout">
             <div className="contact-stack">
               {[
@@ -455,6 +622,30 @@ function App() {
                 <Action href={`sms:${profile.smsPhone}`} icon="call">Message</Action>
               </div>
             </div>
+            <form className="contact-form glass-card reveal" onSubmit={handleContactSubmit}>
+              <div className="form-heading"><span className="eyebrow">Send a message</span><h3>Tell me what’s on your mind.</h3></div>
+              <label>
+                Full name
+                <input autoComplete="name" maxLength={100} name="name" required />
+              </label>
+              <label>
+                Email address
+                <input autoComplete="email" maxLength={254} name="email" required type="email" />
+              </label>
+              <label>
+                Subject
+                <input maxLength={150} name="subject" required />
+              </label>
+              <label>
+                Message
+                <textarea maxLength={5000} name="message" required rows={5} />
+              </label>
+              <button className="button button-primary" disabled={contactStatus.state === 'sending'} type="submit">
+                {contactStatus.state === 'sending' ? 'Sending…' : 'Send message'}
+                {contactStatus.state === 'sending' ? <span aria-hidden="true" className="loading-spinner" /> : <Icon name="arrow" size={18} />}
+              </button>
+              <p aria-live="polite" className={`form-status form-status-${contactStatus.state}`}>{contactStatus.message}</p>
+            </form>
           </div>
 
           <div className="social-section reveal">
@@ -491,8 +682,8 @@ function App() {
         <a href="#home"><Icon name="home" /><span>Home</span></a>
         <a href="#about"><Icon name="user" /><span>About</span></a>
         <button aria-label="Show profile QR code" className="dock-primary" onClick={() => setQrOpen(true)} type="button"><Icon name="qr" /></button>
-        <a href={`tel:${profile.smsPhone}`}><Icon name="call" /><span>Call</span></a>
-        <a href="#contact"><Icon name="user" /><span>Contact</span></a>
+        <a href="#projects"><Icon name="layers" /><span>Projects</span></a>
+        <a href="#contact"><Icon name="mail" /><span>Contact</span></a>
       </nav>
 
       {qrOpen && (

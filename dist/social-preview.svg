@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <linearGradient id="blue" x1="101" x2="1048" y1="73" y2="575" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#00D4FF"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="matrix(445 0 0 368 1002 101)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1871D9" stop-opacity=".4"/>
+      <stop offset="1" stop-color="#071126" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <path fill="#071126" d="M0 0h1200v630H0z"/>
+  <path fill="url(#glow)" d="M0 0h1200v630H0z"/>
+  <path stroke="#29436A" stroke-opacity=".35" d="M0 90h1200M0 150h1200M0 210h1200M0 270h1200M0 330h1200M0 390h1200M0 450h1200M0 510h1200M0 570h1200M60 0v630M120 0v630M180 0v630M240 0v630M300 0v630M360 0v630M420 0v630M480 0v630M540 0v630M600 0v630M660 0v630M720 0v630M780 0v630M840 0v630M900 0v630M960 0v630M1020 0v630M1080 0v630M1140 0v630"/>
+  <rect x="88" y="92" width="56" height="56" rx="16" fill="url(#blue)"/>
+  <path d="M103 108h26v6h-26zm0 11h26v6h-26zm0 11h17v6h-17z" fill="white"/>
+  <text x="88" y="260" fill="#78DDF4" font-family="Arial,sans-serif" font-size="20" font-weight="700" letter-spacing="5">IT STUDENT PORTFOLIO</text>
+  <text x="84" y="342" fill="#F2F7FF" font-family="Arial,sans-serif" font-size="58" font-weight="700">Ivan Lloyd N. Reyes</text>
+  <text x="88" y="399" fill="#9FB2D0" font-family="Arial,sans-serif" font-size="30">Learning, building, and exploring technology.</text>
+  <path stroke="url(#blue)" stroke-linecap="round" stroke-width="5" d="M88 463h156"/>
+  <text x="88" y="520" fill="#9FB2D0" font-family="Arial,sans-serif" font-size="18">Web development · Design · Creative technology</text>
+</svg>
